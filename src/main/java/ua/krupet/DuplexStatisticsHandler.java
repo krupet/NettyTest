@@ -7,12 +7,16 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import org.apache.commons.validator.routines.UrlValidator;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.sql.*;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Created by krupet on 21.04.2015.
@@ -84,8 +88,22 @@ public class DuplexStatisticsHandler extends ChannelDuplexHandler {
                 here i would decide redirect or not
             */
             boolean redirect = false;
-            if (uri.contains("redirect")) {
-                redirect = true;
+            String redirectUrl = null;
+            UrlValidator urlValidator = new UrlValidator();
+            if (uri.contains("redirect?url=")) {
+                QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.getUri());
+                Map<String, List<String>> params = queryStringDecoder.parameters();
+
+                if (!params.isEmpty()) {
+                    List<String> vals = params.get("url");
+                    if (!vals.isEmpty()) {
+                        redirectUrl = vals.get(0);
+                    }
+                }
+
+                if (!urlValidator.isValid(redirectUrl)) {
+                    redirect = true;
+                }
             }
             createRequestRecord(ipAddress, uri, timestamp, redirect, reqSize);
 

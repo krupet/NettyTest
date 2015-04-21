@@ -6,13 +6,13 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
 import io.netty.util.CharsetUtil;
+import org.apache.commons.validator.routines.UrlValidator;
 
 import java.util.List;
 import java.util.Map;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
-import static io.netty.handler.codec.http.HttpResponseStatus.MOVED_PERMANENTLY;
-import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
@@ -34,7 +34,7 @@ public class RequestHandler extends SimpleChannelInboundHandler<Object> {
     protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof HttpRequest) {
             HttpRequest request = this.request = (HttpRequest) msg;
-            if (request.getUri().contains("redirect")){
+            if (request.getUri().contains("redirect?url=")){
 
                 sendRedirect(ctx);
 
@@ -53,24 +53,42 @@ public class RequestHandler extends SimpleChannelInboundHandler<Object> {
                         e.printStackTrace();
                     }
 
-                    sendHelloWorld(ctx);
+                    sendResponsePlainText(ctx, OK);
                 } else {
                     buf.setLength(0);
-                    buf.append("WRONG NEIGHBORHOOD, SUGAR!\r\n");
+                    buf.append("This type of request is not supported!\r\n");
+                    buf.append("Please check requested URL or query string!\r\n");
 
-//                    TODO: bad request or not supported!
+                    sendResponsePlainText(ctx, NOT_IMPLEMENTED);
                 }
 
-                if (!sendHelloWorld(ctx)) {
-                    // If keep-alive is off, close the connection once the content is fully written.
-                    ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
-                }
+                sendResponsePlainText(ctx, OK);
             }
         }
     }
 
+    private void sendResponsePlainText(ChannelHandlerContext ctx, HttpResponseStatus notImplemented) {
+        boolean keepAlive = HttpHeaders.isKeepAlive(request);
+
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, notImplemented,
+                Unpooled.copiedBuffer(buf.toString(), CharsetUtil.UTF_8));
+
+        response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
+
+        if (!keepAlive) {
+            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+        } else {
+            response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
+            response.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+        }
+
+        ctx.write(response);
+    }
+
+
     private void sendRedirect(ChannelHandlerContext ctx) {
         String redirectUrl = null;
+        UrlValidator urlValidator = new UrlValidator();
 
         /*
             this is overhead but i will fix it!
@@ -81,11 +99,15 @@ public class RequestHandler extends SimpleChannelInboundHandler<Object> {
 
         if (!params.isEmpty()) {
             List<String> vals = params.get("url");
-            redirectUrl = vals.get(0);
-//            TODO: bad request if redirectUrl is not valid!
-//            for (String val : vals) {
-//                redirectUrl = val;
-//            }
+            if (!vals.isEmpty()) {
+                redirectUrl = vals.get(0);
+            }
+        }
+
+        if (!urlValidator.isValid(redirectUrl)) {
+            buf.setLength(0);
+            buf.append("Please check requested URL - it is not valid!\r\n");
+            sendResponsePlainText(ctx, BAD_REQUEST);
         }
 
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, MOVED_PERMANENTLY);
@@ -100,22 +122,5 @@ public class RequestHandler extends SimpleChannelInboundHandler<Object> {
             response.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
             ctx.write(response);
         }
-    }
-
-    private boolean sendHelloWorld(ChannelHandlerContext ctx) {
-        boolean keepAlive = HttpHeaders.isKeepAlive(request);
-
-        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK,
-                Unpooled.copiedBuffer(buf.toString(), CharsetUtil.UTF_8));
-
-        response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
-
-        if (keepAlive) {
-            response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
-            response.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
-        }
-
-        ctx.write(response);
-        return keepAlive;
     }
 }
