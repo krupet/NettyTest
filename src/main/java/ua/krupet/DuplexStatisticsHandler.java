@@ -131,6 +131,11 @@ public class DuplexStatisticsHandler extends ChannelDuplexHandler {
              */
             byte[] byteReq = (msg.toString()).getBytes("UTF-8");
             long resSize = byteReq.length;
+
+            String addResponseSizeQuery = "UPDATE connections1 SET sent_bytes = \'" + resSize +
+                    "\' WHERE ip = \'" + requestIp + "\' AND timestamp = \'" + requestTime + "\';";
+
+            insertIntoTable(addResponseSizeQuery);
         }
         super.write(ctx, msg, promise);
     }
