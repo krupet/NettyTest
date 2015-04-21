@@ -35,7 +35,6 @@ public class DuplexStatisticsHandler extends ChannelDuplexHandler {
     static final ChannelGroup channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
     public static AttributeKey<Long> CONN_NUMBER = AttributeKey.valueOf("CONN_NUMBER");
-//    public static AttributeKey<String> MY_KEY = AttributeKey.valueOf("MY_KEY");
 
     private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
     private static final String DB_CONNECTION = "jdbc:mysql://localhost:3306/nettydb";
@@ -88,15 +87,14 @@ public class DuplexStatisticsHandler extends ChannelDuplexHandler {
             if (uri.contains("redirect")) {
                 redirect = true;
             }
-            createRequestRecord(ipAddress, uri, timestamp, redirect);
+            createRequestRecord(ipAddress, uri, timestamp, redirect, reqSize);
 
             /*
                 Getting number of current connections
              */
             long numberOfCurrentConnections = channels.size();
-            System.out.println(numberOfCurrentConnections);
             /*
-                attempting to pass this value to other handler
+                pass this value to other handlers via channel
             */
             ctx.channel().attr(CONN_NUMBER).set(numberOfCurrentConnections);
 
@@ -115,34 +113,36 @@ public class DuplexStatisticsHandler extends ChannelDuplexHandler {
              */
             byte[] byteReq = (msg.toString()).getBytes("UTF-8");
             long resSize = byteReq.length;
-//            System.out.println(resSize);
-            System.out.println("\n\n" + msg.toString());
         }
         super.write(ctx, msg, promise);
     }
 
-    private void createRequestRecord(String ipAddress, String uri, Timestamp timestamp, boolean redirect) {
+    private void createRequestRecord(String ipAddress, String uri, Timestamp timestamp, boolean redirect, long reqSize) {
+
+        String createRequestRecordQuery = "INSERT INTO connections1 (ip, uri, timestamp, redirect, get_bytes) VALUES (\'"
+                + ipAddress + "\', \'" + uri + "\', \'" + timestamp + "\', \'" + redirect + "\', \'" + reqSize + "\');";
+
+        insertIntoTable(createRequestRecordQuery);
+    }
+
+    private void insertIntoTable(String query) {
         Connection dbConnection = null;
         PreparedStatement preparedStatement = null;
 
-        String createTableSQL = "INSERT INTO connections (ip, uri, timestamp, redirect) VALUES (\'"
-                + ipAddress + "\', \'" + uri + "\', \'" + timestamp + "\', \'" + redirect + "\');";
-
         try {
             dbConnection = getDBConnection();
-            preparedStatement = dbConnection.prepareStatement(createTableSQL);
+            preparedStatement = dbConnection.prepareStatement(query);
 
             preparedStatement.executeUpdate();
 
         } catch (SQLException e) {
-
-            System.out.println(e.getMessage());
-
+            e.printStackTrace();
         } finally {
             try {
                 if (preparedStatement != null)
                     preparedStatement.close();
             } catch (SQLException se2) {
+                se2.printStackTrace();
             }
             try {
                 if (dbConnection != null)
@@ -161,21 +161,16 @@ public class DuplexStatisticsHandler extends ChannelDuplexHandler {
             Class.forName(DB_DRIVER);
 
         } catch (ClassNotFoundException e) {
-
-            System.out.println(e.getMessage());
-
+            e.printStackTrace();
         }
 
         try {
-
             dbConnection = DriverManager.getConnection(
                     DB_CONNECTION, DB_USER, DB_PASSWORD);
             return dbConnection;
 
         } catch (SQLException e) {
-
-            System.out.println(e.getMessage());
-
+            e.printStackTrace();
         }
 
         return dbConnection;

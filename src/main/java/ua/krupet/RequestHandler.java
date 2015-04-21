@@ -1,16 +1,12 @@
 package ua.krupet;
 
-import com.sun.jndi.toolkit.url.Uri;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
-import io.netty.util.AttributeKey;
 import io.netty.util.CharsetUtil;
 
-import java.net.*;
 import java.util.List;
 import java.util.Map;
 
@@ -23,8 +19,6 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
  * Created by krupet on 20.04.2015.
  */
 public class RequestHandler extends SimpleChannelInboundHandler<Object> {
-
-    public static AttributeKey<Long> CONN_NUMBER = AttributeKey.valueOf("CONN_NUMBER");
 
     private HttpRequest request;
 
@@ -64,11 +58,6 @@ public class RequestHandler extends SimpleChannelInboundHandler<Object> {
                     buf.setLength(0);
                     buf.append("WRONG NEIGHBORHOOD, SUGAR!\r\n");
 
-                    Long numberOfConnections = (Long) ctx.channel().attr(CONN_NUMBER).get();
-                    buf.append("Number of connections: ");
-                    buf.append(numberOfConnections);
-                    buf.append("\r\n");
-
 //                    TODO: bad request or not supported!
                 }
 
@@ -82,14 +71,6 @@ public class RequestHandler extends SimpleChannelInboundHandler<Object> {
 
     private void sendRedirect(ChannelHandlerContext ctx) {
         String redirectUrl = null;
-//        String newUrl ="http://somedomain" + request.getUri();
-//
-//        try {
-//            URL url = new URL(newUrl);
-//            redirectUrl = url.getQuery();
-//        } catch (MalformedURLException e) {
-//            e.printStackTrace();
-//        }
 
         /*
             this is overhead but i will fix it!
@@ -113,7 +94,6 @@ public class RequestHandler extends SimpleChannelInboundHandler<Object> {
 
         boolean keepAlive = HttpHeaders.isKeepAlive(request);
 
-        System.out.println(response);
         if (!keepAlive) {
             ctx.write(response).addListener(ChannelFutureListener.CLOSE);
         } else {
@@ -125,8 +105,7 @@ public class RequestHandler extends SimpleChannelInboundHandler<Object> {
     private boolean sendHelloWorld(ChannelHandlerContext ctx) {
         boolean keepAlive = HttpHeaders.isKeepAlive(request);
 
-        FullHttpResponse response = new DefaultFullHttpResponse(
-                HTTP_1_1, OK,
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK,
                 Unpooled.copiedBuffer(buf.toString(), CharsetUtil.UTF_8));
 
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
