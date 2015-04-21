@@ -7,6 +7,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
+import io.netty.util.AttributeKey;
 import io.netty.util.CharsetUtil;
 
 import java.net.*;
@@ -22,6 +23,9 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
  * Created by krupet on 20.04.2015.
  */
 public class RequestHandler extends SimpleChannelInboundHandler<Object> {
+
+    public static AttributeKey<Long> CONN_NUMBER = AttributeKey.valueOf("CONN_NUMBER");
+
     private HttpRequest request;
 
     /** Buffer that stores the response content */
@@ -59,6 +63,11 @@ public class RequestHandler extends SimpleChannelInboundHandler<Object> {
                 } else {
                     buf.setLength(0);
                     buf.append("WRONG NEIGHBORHOOD, SUGAR!\r\n");
+
+                    Long numberOfConnections = (Long) ctx.channel().attr(CONN_NUMBER).get();
+                    buf.append("Number of connections: ");
+                    buf.append(numberOfConnections);
+                    buf.append("\r\n");
 
 //                    TODO: bad request or not supported!
                 }

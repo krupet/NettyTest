@@ -3,8 +3,12 @@ package ua.krupet;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.GlobalEventExecutor;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -21,6 +25,18 @@ import java.sql.*;
 
 public class DuplexStatisticsHandler extends ChannelDuplexHandler {
 
+    /*
+        Defining a thread safe Set of all connected channels
+        TODO: need to think how to pass it properly via constructor from ServerInitializer
+        and have access from other handlers
+        but this is seems as overhead - i could just create some class with volatile
+        counter field and pass it to other handlers from ServerInitializer via constructor???
+     */
+    static final ChannelGroup channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+
+    public static AttributeKey<Long> CONN_NUMBER = AttributeKey.valueOf("CONN_NUMBER");
+//    public static AttributeKey<String> MY_KEY = AttributeKey.valueOf("MY_KEY");
+
     private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
     private static final String DB_CONNECTION = "jdbc:mysql://localhost:3306/nettydb";
     private static final String DB_USER = "javamanager";
@@ -28,6 +44,12 @@ public class DuplexStatisticsHandler extends ChannelDuplexHandler {
 
     private String requestIp;
     private Timestamp requestTime;
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        channels.add(ctx.channel());
+        super.channelActive(ctx);
+    }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -67,6 +89,16 @@ public class DuplexStatisticsHandler extends ChannelDuplexHandler {
                 redirect = true;
             }
             createRequestRecord(ipAddress, uri, timestamp, redirect);
+
+            /*
+                Getting number of current connections
+             */
+            long numberOfCurrentConnections = channels.size();
+            System.out.println(numberOfCurrentConnections);
+            /*
+                attempting to pass this value to other handler
+            */
+            ctx.channel().attr(CONN_NUMBER).set(numberOfCurrentConnections);
 
             /*
                 Sending message to the next handler
