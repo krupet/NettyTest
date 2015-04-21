@@ -1,5 +1,6 @@
 package ua.krupet;
 
+import com.sun.jndi.toolkit.url.Uri;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -8,8 +9,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
 import io.netty.util.CharsetUtil;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.*;
 import java.util.List;
 import java.util.Map;
 
@@ -59,6 +59,8 @@ public class RequestHandler extends SimpleChannelInboundHandler<Object> {
                 } else {
                     buf.setLength(0);
                     buf.append("WRONG NEIGHBORHOOD, SUGAR!\r\n");
+
+//                    TODO: bad request or not supported!
                 }
 
                 if (!sendHelloWorld(ctx)) {
@@ -70,9 +72,9 @@ public class RequestHandler extends SimpleChannelInboundHandler<Object> {
     }
 
     private void sendRedirect(ChannelHandlerContext ctx) {
-        String newUrl ="http://somedomain" + request.getUri();
         String redirectUrl = null;
-
+//        String newUrl ="http://somedomain" + request.getUri();
+//
 //        try {
 //            URL url = new URL(newUrl);
 //            redirectUrl = url.getQuery();
@@ -89,9 +91,11 @@ public class RequestHandler extends SimpleChannelInboundHandler<Object> {
 
         if (!params.isEmpty()) {
             List<String> vals = params.get("url");
-            for (String val : vals) {
-                redirectUrl = val;
-            }
+            redirectUrl = vals.get(0);
+//            TODO: bad request if redirectUrl is not valid!
+//            for (String val : vals) {
+//                redirectUrl = val;
+//            }
         }
 
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, MOVED_PERMANENTLY);
