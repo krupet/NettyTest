@@ -123,4 +123,12 @@ public class RequestHandler extends SimpleChannelInboundHandler<Object> {
             ctx.write(response);
         }
     }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        buf.setLength(0);
+        buf.append("Internal server error!\r\n");
+        buf.append(cause.getMessage()).append("\r\n");
+        sendResponsePlainText(ctx, INTERNAL_SERVER_ERROR);
+    }
 }
