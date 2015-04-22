@@ -22,6 +22,7 @@ public class HttpNettyServerInitializer extends ChannelInitializer<SocketChannel
         p.addLast(new HttpObjectAggregator(1048576));
         p.addLast("encoder", new HttpResponseEncoder());
         p.addLast("duplex statistic handler",new DuplexStatisticsHandler());
+//        p.addLast("status request handler",new StatisticsRequestHandler());
         p.addLast("request handler",new RequestHandler());
     }
 }
