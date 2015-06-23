@@ -1,6 +1,5 @@
 package ua.krupet;
 
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
@@ -17,12 +16,11 @@ public class HttpNettyServerInitializer extends ChannelInitializer<SocketChannel
     public void initChannel(SocketChannel ch) {
         ChannelPipeline p = ch.pipeline();
 
-//        p.addLast("counter", new ChannelSpeedCheckHandler(1000L));
+        p.addLast("counter", new ChannelSpeedCheckHandler(1000L));
         p.addLast("decoder", new HttpRequestDecoder());
         p.addLast(new HttpObjectAggregator(1048576));
         p.addLast("encoder", new HttpResponseEncoder());
         p.addLast("duplex statistic handler",new DuplexStatisticsHandler());
-//        p.addLast("status request handler",new StatisticsRequestHandler());
         p.addLast("request handler",new RequestHandler());
     }
 }
