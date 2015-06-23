@@ -13,6 +13,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.apache.commons.validator.routines.UrlValidator;
 
+import javax.sql.DataSource;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.sql.*;
@@ -50,13 +51,27 @@ public class DuplexStatisticsHandler extends ChannelDuplexHandler {
     private HttpRequest httpRequest;
     private final StringBuilder buf = new StringBuilder();
 
-    private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
-    private static final String DB_CONNECTION = "jdbc:mysql://localhost:3306/nettydb";
-    private static final String DB_USER = "javamanager";
-    private static final String DB_PASSWORD = "javamanager";
+//    private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
+//    private static final String DB_CONNECTION = "jdbc:mysql://localhost:3306/nettydb";
+//    private static final String DB_USER = "javamanager";
+//    private static final String DB_PASSWORD = "javamanager";
 
     private String requestIp;
     private Timestamp requestTime;
+
+    private DataSource dataSource;
+
+    public DuplexStatisticsHandler() {
+    }
+
+    public DuplexStatisticsHandler(DataSource dataSource) {
+        super();
+        this.dataSource = dataSource;
+    }
+
+    private Connection getDBConnection() throws SQLException {
+        return dataSource.getConnection();
+    }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -381,28 +396,28 @@ public class DuplexStatisticsHandler extends ChannelDuplexHandler {
         }
     }
 
-    private static Connection getDBConnection() {
-        Connection dbConnection = null;
-
-        try {
-
-            Class.forName(DB_DRIVER);
-
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-
-        try {
-            dbConnection = DriverManager.getConnection(
-                    DB_CONNECTION, DB_USER, DB_PASSWORD);
-            return dbConnection;
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return dbConnection;
-    }
+//    private static Connection getDBConnection() {
+//        Connection dbConnection = null;
+//
+//        try {
+//
+//            Class.forName(DB_DRIVER);
+//
+//        } catch (ClassNotFoundException e) {
+//            e.printStackTrace();
+//        }
+//
+//        try {
+//            dbConnection = DriverManager.getConnection(
+//                    DB_CONNECTION, DB_USER, DB_PASSWORD);
+//            return dbConnection;
+//
+//        } catch (SQLException e) {
+//            e.printStackTrace();
+//        }
+//
+//        return dbConnection;
+//    }
 
     private long getTotalAmountRequest(String query) {
         long totalAmount = 0L;
